@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.23.1-alpine
+    networks:
+      - textly_network
+    ports:
+      - 80:80
+    depends_on:
+      - textly_auth_db
+      - textly_auth_service
+      - textly_profiles_db
+      - textly_profiles_service
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+
+  textly_auth_service:
+    container_name: textly_auth_service
+    build: ./textly_auth/build
+    expose:
+      - ${AUTH_PORT}
+      - 465
+    ports:
+      - ${AUTH_PORT}:${AUTH_PORT}
+      - 465:465
+    environment:
+      - MAIL_LOGIN=${MAIL_LOGIN}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - SMTP_MAIL=${SMTP_MAIL}
+      - SECRET_KEY=${SECRET_KEY}
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_HOST=${AUTH_HOST}
+      - AUTH_DATABASE_HOST=${AUTH_DATABASE_HOST}
+      - AUTH_DATABASE_PORT=${AUTH_DATABASE_PORT}
+      - AUTH_DATABASE_NAME=${AUTH_DATABASE_NAME}
+      - AUTH_DATABASE_USERNAME=${AUTH_DATABASE_USERNAME}
+      - AUTH_DATABASE_PASSWORD=${AUTH_DATABASE_PASSWORD}
+    restart: always
+    depends_on:
+      - textly_auth_db
+    networks:
+      - textly_network
+
+  textly_auth_db:
+    container_name: textly_auth_db
+    image: postgres:15-alpine
+    ports:
+      - "${AUTH_DATABASE_PORT}:${AUTH_DATABASE_PORT}"
+    environment:
+      POSTGRES_USER: ${AUTH_DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${AUTH_DATABASE_PASSWORD}
+      POSTGRES_DB: ${AUTH_DATABASE_NAME}
+    command: -p ${AUTH_DATABASE_PORT}
+    volumes:
+      - textly_auth_db:/var/lib/postgresql/data
+      - ./textly_auth/db/:/docker-entrypoint-initdb.d
+    restart: always
+    networks:
+      - textly_network
+
+  textly_profiles_service:
+    container_name: textly_profiles_service
+    build: ./textly_profiles/build
+    expose:
+      - ${PROFILES_PORT}
+    ports:
+      - ${PROFILES_PORT}:${PROFILES_PORT}
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - PROFILES_PORT=${PROFILES_PORT}
+      - PROFILES_HOST=${PROFILES_HOST}
+      - PROFILES_DATABASE_HOST=${PROFILES_DATABASE_HOST}
+      - PROFILES_DATABASE_PORT=${PROFILES_DATABASE_PORT}
+      - PROFILES_DATABASE_NAME=${PROFILES_DATABASE_NAME}
+      - PROFILES_DATABASE_USERNAME=${PROFILES_DATABASE_USERNAME}
+      - PROFILES_DATABASE_PASSWORD=${PROFILES_DATABASE_PASSWORD}
+    restart: always
+    depends_on:
+      - textly_auth_db
+      - textly_auth_service
+      - textly_profiles_db
+    networks:
+      - textly_network
+
+  textly_profiles_db:
+    container_name: textly_profiles_db
+    image: postgres:15-alpine
+    ports:
+      - "${PROFILES_DATABASE_PORT}:${PROFILES_DATABASE_PORT}"
+    environment:
+      POSTGRES_USER: ${PROFILES_DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${PROFILES_DATABASE_PASSWORD}
+      POSTGRES_DB: ${PROFILES_DATABASE_NAME}
+    command: -p ${PROFILES_DATABASE_PORT}
+    volumes:
+      - textly_profiles_db:/var/lib/postgresql/data
+      - ./textly_profiles/db/:/docker-entrypoint-initdb.d
+    restart: always
+    networks:
+      - textly_network
+
+  textly_posts_service:
+    container_name: textly_posts_service
+    build: ./textly_posts/build
+    expose:
+      - ${POSTS_PORT}
+    ports:
+      - ${POSTS_PORT}:${POSTS_PORT}
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - POSTS_PORT=${POSTS_PORT}
+      - POSTS_HOST=${POSTS_HOST}
+      - POSTS_DATABASE_HOST=${POSTS_DATABASE_HOST}
+      - POSTS_DATABASE_PORT=${POSTS_DATABASE_PORT}
+      - POSTS_DATABASE_NAME=${POSTS_DATABASE_NAME}
+      - POSTS_DATABASE_USERNAME=${POSTS_DATABASE_USERNAME}
+      - POSTS_DATABASE_PASSWORD=${POSTS_DATABASE_PASSWORD}
+    restart: always
+    depends_on:
+      - textly_auth_db
+      - textly_auth_service
+      - textly_profiles_db
+      - textly_profiles_service
+      - textly_posts_db
+    networks:
+      - textly_network
+
+  textly_posts_db:
+    container_name: textly_posts_db
+    image: postgres:15-alpine
+    ports:
+      - "${POSTS_DATABASE_PORT}:${POSTS_DATABASE_PORT}"
+    environment:
+      POSTGRES_USER: ${POSTS_DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${POSTS_DATABASE_PASSWORD}
+      POSTGRES_DB: ${POSTS_DATABASE_NAME}
+    command: -p ${POSTS_DATABASE_PORT}
+    volumes:
+      - textly_posts_db:/var/lib/postgresql/data
+      - ./textly_posts/db/:/docker-entrypoint-initdb.d
+    restart: always
+    networks:
+      - textly_network
+
+  textly_feed_service:
+    container_name: textly_feed_service
+    build: ./textly_feed/build
+    expose:
+      - ${FEED_PORT}
+    ports:
+      - ${FEED_PORT}:${FEED_PORT}
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - FEED_PORT=${FEED_PORT}
+      - FEED_HOST=${FEED_HOST}
+      - POSTS_DATABASE_HOST=${POSTS_DATABASE_HOST}
+      - POSTS_DATABASE_PORT=${POSTS_DATABASE_PORT}
+      - POSTS_DATABASE_NAME=${POSTS_DATABASE_NAME}
+      - POSTS_DATABASE_USERNAME=${POSTS_DATABASE_USERNAME}
+      - POSTS_DATABASE_PASSWORD=${POSTS_DATABASE_PASSWORD}
+      - PROFILES_DATABASE_HOST=${PROFILES_DATABASE_HOST}
+      - PROFILES_DATABASE_PORT=${PROFILES_DATABASE_PORT}
+      - PROFILES_DATABASE_NAME=${PROFILES_DATABASE_NAME}
+      - PROFILES_DATABASE_USERNAME=${PROFILES_DATABASE_USERNAME}
+      - PROFILES_DATABASE_PASSWORD=${PROFILES_DATABASE_PASSWORD}
+    restart: always
+    depends_on:
+      - textly_auth_db
+      - textly_auth_service
+      - textly_profiles_db
+      - textly_profiles_service
+      - textly_posts_db
+    networks:
+      - textly_network
+
+volumes:
+  textly_auth_db: {}
+  textly_profiles_db: {}
+  textly_posts_db: {}
+
+networks:
+  textly_network:
+    driver: bridge
