@@ -1,4 +1,4 @@
 [submodule "textly_profiles"]
-	url = git@github.com:serezhia/textly_profiles.git
+	url = git@github.com:serezhia/textly_backend_profiles.git
 [submodule "textly_posts"]
 	url = https://github.com/serezhia/textly_posts.git
